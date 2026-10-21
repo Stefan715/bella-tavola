@@ -1,12 +1,35 @@
 
-import { useState } from 'react'
-import { dishes } from '../data/menu.js'
-
+import { useEffect, useState } from 'react'
 
 const categories = ['All', 'Starters', 'Main Courses', 'Desserts']
 
 export default function Menu() {
+  const [dishes, setDishes] = useState([])
   const [activeCategory, setActiveCategory] = useState('All')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    async function fetchDishes() {
+      try {
+        const response = await fetch('http://localhost:3000/api/menu')
+
+        if (!response.ok) {
+          throw new Error('Failed to load menu.')
+        }
+
+        const data = await response.json()
+        setDishes(data)
+      } catch (err) {
+        setError('Unable to load the menu. Please try again later.')
+        console.error('Menu loading error:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchDishes()
+  }, [])
 
   const filteredDishes =
     activeCategory === 'All'
@@ -47,41 +70,61 @@ export default function Menu() {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 gap-7 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredDishes.map((dish) => (
-            <article
-              key={dish.id}
-              className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
-            >
-              <img
-                src={dish.image}
-                alt={dish.name}
-                className="h-56 w-full object-cover"
-                loading="lazy"
-              />
+        {loading && (
+          <p className="py-10 text-center text-stone-600">
+            Loading menu...
+          </p>
+        )}
 
-              <div className="p-5">
-                <div className="mb-3 flex items-start justify-between gap-4">
-                  <h3 className="text-xl font-bold text-stone-900">
-                    {dish.name}
-                  </h3>
+        {error && (
+          <p role="alert" className="py-10 text-center text-red-700">
+            {error}
+          </p>
+        )}
 
-                  <span className="shrink-0 font-bold text-emerald-900">
-                    €{dish.price.toFixed(2)}
+        {!loading && !error && (
+          <div className="grid grid-cols-1 gap-7 sm:grid-cols-2 lg:grid-cols-3">
+            {filteredDishes.map((dish) => (
+              <article
+                key={dish.id}
+                className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
+              >
+                <img
+                  src={dish.image}
+                  alt={dish.name}
+                  className="h-56 w-full object-cover"
+                  loading="lazy"
+                />
+
+                <div className="p-5">
+                  <div className="mb-3 flex items-start justify-between gap-4">
+                    <h3 className="text-xl font-bold text-stone-900">
+                      {dish.name}
+                    </h3>
+
+                    <span className="shrink-0 font-bold text-emerald-900">
+                      €{Number(dish.price).toFixed(2)}
+                    </span>
+                  </div>
+
+                  <p className="mb-4 text-sm leading-6 text-stone-600">
+                    {dish.description}
+                  </p>
+
+                  <span className="inline-block rounded-full bg-stone-100 px-3 py-1 text-xs font-medium text-stone-600">
+                    {dish.category}
                   </span>
                 </div>
+              </article>
+            ))}
+          </div>
+        )}
 
-                <p className="mb-4 text-sm leading-6 text-stone-600">
-                  {dish.description}
-                </p>
-
-                <span className="inline-block rounded-full bg-stone-100 px-3 py-1 text-xs font-medium text-stone-600">
-                  {dish.category}
-                </span>
-              </div>
-            </article>
-          ))}
-        </div>
+        {!loading && !error && filteredDishes.length === 0 && (
+          <p className="py-10 text-center text-stone-600">
+            No dishes found in this category.
+          </p>
+        )}
       </div>
     </section>
   )
