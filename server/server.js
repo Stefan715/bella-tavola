@@ -2,6 +2,7 @@
 import express from 'express'
 import { pool } from './db.js'
 import cors from 'cors'
+import authRouter from './auth.js'
 
 const app = express()
 app.use(cors({
@@ -14,6 +15,8 @@ app.use(cors({
 const PORT = process.env.PORT || 3000
 
 app.use(express.json())
+
+app.use('/api/auth', authRouter)
 
 app.get('/api/health', (req, res) => {
   res.json({
