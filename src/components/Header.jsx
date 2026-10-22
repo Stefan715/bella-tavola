@@ -1,5 +1,5 @@
 
-export default function Header() {
+export default function Header({ user, onLoginClick, onLogout }) {
   return (
     <header className="sticky top-0 z-50 border-b border-stone-200 bg-white">
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 md:px-8">
@@ -29,6 +29,30 @@ export default function Header() {
           >
             Book a Table
           </a>
+
+          {user ? (
+            <>
+              <span className="hidden text-emerald-900 sm:inline">
+                Hi, {user.name}
+              </span>
+
+              <button
+                type="button"
+                onClick={onLogout}
+                className="rounded-full border border-emerald-900 px-4 py-2 text-emerald-900 transition hover:bg-emerald-50"
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={onLoginClick}
+              className="rounded-full border border-emerald-900 px-4 py-2 text-emerald-900 transition hover:bg-emerald-50"
+            >
+              Login
+            </button>
+          )}
         </div>
       </nav>
     </header>
