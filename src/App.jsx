@@ -7,6 +7,7 @@ import About from './components/About.jsx'
 import Reservation from './components/Reservation.jsx'
 import Footer from './components/Footer.jsx'
 import Auth from './components/Auth.jsx'
+import API_URL from './api.js'
 
 export default function App() {
   const [user, setUser] = useState(null)
@@ -15,7 +16,7 @@ export default function App() {
   async function loadUser() {
     try {
       const response = await fetch(
-        'http://localhost:3000/api/auth/me',
+        `${API_URL}/api/auth/me`,
         {
           credentials: 'include',
         },
@@ -36,7 +37,7 @@ export default function App() {
   async function handleLogout() {
     try {
       const response = await fetch(
-        'http://localhost:3000/api/auth/logout',
+        `${API_URL}/api/auth/logout`,
         {
           method: 'POST',
           credentials: 'include',

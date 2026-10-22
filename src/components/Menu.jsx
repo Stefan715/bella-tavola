@@ -1,5 +1,6 @@
 
 import { useEffect, useState } from 'react'
+import API_URL from '../api.js'
 
 const categories = ['All', 'Starters', 'Main Courses', 'Desserts']
 
@@ -12,7 +13,7 @@ export default function Menu() {
   useEffect(() => {
     async function fetchDishes() {
       try {
-        const response = await fetch('http://localhost:3000/api/menu')
+        const response = await fetch(`${API_URL}/api/menu`)
 
         if (!response.ok) {
           throw new Error('Failed to load menu.')

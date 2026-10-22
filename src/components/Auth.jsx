@@ -1,5 +1,6 @@
 
 import { useState } from 'react'
+import API_URL from '../api.js'
 
 export default function Auth({ onClose, onLogin }) {
   const [isLogin, setIsLogin] = useState(true)
@@ -25,7 +26,7 @@ export default function Auth({ onClose, onLogin }) {
 
     try {
       const response = await fetch(
-        `http://localhost:3000/api/auth/${endpoint}`,
+        `${API_URL}/api/auth/${endpoint}`,
         {
           method: 'POST',
           headers: {
