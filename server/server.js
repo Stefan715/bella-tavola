@@ -7,7 +7,24 @@ import 'dotenv/config'
 import session from 'express-session'
 import connectPgSimple from 'connect-pg-simple'
 
+
 const app = express()
+const PORT = process.env.PORT || 3000
+
+// Allow the deployed server to handle HTTPS requests through the host.
+app.set('trust proxy', 1)
+
+// Allow requests from the frontend.
+app.use(cors({
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:5175',
+    process.env.CLIENT_URL,
+  ].filter(Boolean),
+  credentials: true,
+}))
+
 const PgSession = connectPgSimple(session)
 
 app.use(session({
@@ -25,15 +42,7 @@ app.use(session({
     secure: process.env.NODE_ENV === 'production',
   },
 }))
-app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'http://localhost:5175',
-  ],
-  credentials: true,
-}))
-const PORT = process.env.PORT || 3000
+
 
 app.use(express.json())
 
