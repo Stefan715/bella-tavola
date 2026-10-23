@@ -186,7 +186,7 @@ router.post('/logout', (req, res) => {
 
     res.clearCookie('connect.sid', {
       httpOnly: true,
-      sameSite: 'lax',
+      sameSite: 'none',
       secure: process.env.NODE_ENV === 'production',
     })
 
