@@ -184,7 +184,7 @@ app.post('/api/checkout', async (req, res) => {
         ]
       )
     }
-
+    console.log('Checkout CLIENT_URL:', process.env.CLIENT_URL)
     const checkoutSession = await stripe.checkout.sessions.create({
       mode: 'payment',
       line_items: result.rows.map((dish) => ({
@@ -262,6 +262,42 @@ app.get('/api/orders/:id', async (req, res) => {
 })
 
 
+app.get('/api/orders/by-session/:sessionId', async (req, res) => {
+  try {
+    if (!req.session.userId) {
+      return res.status(401).json({
+        error: 'Please log in first.',
+      })
+    }
+
+    const { sessionId } = req.params
+
+    const result = await pool.query(
+      `SELECT o.id, o.status, o.total_amount, o.created_at
+       FROM orders o
+       JOIN users u ON u.id = o.user_id
+       WHERE o.stripe_session_id = $1
+         AND o.user_id = $2`,
+      [sessionId, req.session.userId]
+    )
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        error: 'Order not found.',
+      })
+    }
+
+    return res.json({ order: result.rows[0] })
+  } catch (error) {
+    console.error('Order lookup failed:', error.message)
+
+    return res.status(500).json({
+      error: 'Unable to fetch order.',
+    })
+  }
+})
+
+
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'OK',
@@ -286,7 +322,7 @@ app.get('/api/menu', async (req, res) => {
     })
   }
 })
-
+console.log('CLIENT_URL:', process.env.CLIENT_URL)
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`)
 })
