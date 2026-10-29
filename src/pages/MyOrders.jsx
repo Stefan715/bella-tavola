@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
+import API_URL from '../api.js'
 
 export default function MyOrders() {
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-
+  
   useEffect(() => {
-    fetch('http://localhost:3000/api/orders', {
-      credentials: 'include',
+    fetch(`${API_URL}/api/orders`, {
+    credentials: 'include',
     })
       .then(async (response) => {
         const data = await response.json()
