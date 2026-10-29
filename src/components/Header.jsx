@@ -96,6 +96,14 @@ export default function Header({ user, onLoginClick, onLogout }) {
           </a>
 
           <a
+            href="/my-orders"
+            onClick={closeMenu}
+            className="transition hover:text-emerald-800"
+          >
+            My Orders
+          </a>
+
+          <a
             href="#reservation"
             onClick={closeMenu}
             className="rounded-full bg-emerald-900 px-5 py-2 text-center text-white transition hover:bg-emerald-800"

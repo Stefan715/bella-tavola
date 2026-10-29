@@ -63,25 +63,67 @@ app.post(
     }
 
     try {
-      if (event.type === 'checkout.session.completed') {
-        const checkoutSession = event.data.object
+  if (event.type === 'checkout.session.completed') {
+    const checkoutSession = event.data.object
 
-        if (checkoutSession.payment_status === 'paid') {
-          await pool.query(
-            `UPDATE orders
-             SET status = 'paid'
-             WHERE stripe_session_id = $1
-               AND status = 'pending'`,
-            [checkoutSession.id]
+    if (checkoutSession.payment_status === 'paid') {
+      const client = await pool.connect()
+
+      try {
+        await client.query('BEGIN')
+
+        const orderResult = await client.query(
+          `UPDATE orders
+           SET status = 'paid'
+           WHERE stripe_session_id = $1
+             AND status = 'pending'
+           RETURNING id`,
+          [checkoutSession.id]
+        )
+
+        if (orderResult.rowCount > 0) {
+          const orderId = orderResult.rows[0].id
+
+          const itemsResult = await client.query(
+            `SELECT menu_item_id, quantity
+             FROM "orderItems"
+             WHERE order_id = $1`,
+            [orderId]
           )
-        }
-      }
 
-      res.json({ received: true })
-    } catch (error) {
-      console.error('Webhook processing error:', error.message)
-      res.status(500).json({ error: 'Webhook processing failed.' })
+          for (const item of itemsResult.rows) {
+            const stockResult = await client.query(
+              `UPDATE menu_items
+               SET stock_quantity = stock_quantity - $1
+               WHERE id = $2
+                 AND stock_quantity >= $1
+               RETURNING id`,
+              [item.quantity, item.menu_item_id]
+            )
+
+            if (stockResult.rowCount === 0) {
+              throw new Error(
+                `Insufficient stock for menu item ${item.menu_item_id}`
+              )
+            }
+          }
+        }
+
+        await client.query('COMMIT')
+      } catch (error) {
+        await client.query('ROLLBACK')
+        throw error
+      } finally {
+        client.release()
+      }
     }
+  }
+
+  res.json({ received: true })
+} catch (error) {
+  console.error('Webhook processing error:', error.message)
+  res.status(500).json({ error: 'Webhook processing failed.' })
+}
   }
 )
 
@@ -185,33 +227,55 @@ app.post('/api/checkout', async (req, res) => {
       )
     }
     console.log('Checkout CLIENT_URL:', process.env.CLIENT_URL)
-    const checkoutSession = await stripe.checkout.sessions.create({
-      mode: 'payment',
-      line_items: result.rows.map((dish) => ({
-        price_data: {
-          currency: 'bam',
-          product_data: {
-            name: dish.name,
-          },
-          unit_amount: Math.round(Number(dish.price) * 100),
+    let checkoutSession
+
+try {
+  checkoutSession = await stripe.checkout.sessions.create({
+    mode: 'payment',
+    line_items: result.rows.map((dish) => ({
+      price_data: {
+        currency: 'bam',
+        product_data: {
+          name: dish.name,
         },
-        quantity: quantities.get(dish.id),
-      })),
-      success_url: `${process.env.CLIENT_URL}/order-success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.CLIENT_URL}/online-order`,
-      metadata: {
-        orderId: String(orderId),
+        unit_amount: Math.round(Number(dish.price) * 100),
       },
-    })
+      quantity: quantities.get(dish.id),
+    })),
+    success_url: `${process.env.CLIENT_URL}/order-success?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${process.env.CLIENT_URL}/online-order`,
+    metadata: {
+      orderId: String(orderId),
+    },
+  })
 
-    await pool.query(
-      `UPDATE orders
-       SET stripe_session_id = $1
-       WHERE id = $2`,
-      [checkoutSession.id, orderId]
-    )
+  await pool.query(
+    `UPDATE orders
+     SET stripe_session_id = $1
+     WHERE id = $2`,
+    [checkoutSession.id, orderId]
+  )
+} catch (error) {
+  await pool.query(
+    `DELETE FROM "orderItems"
+     WHERE order_id = $1`,
+    [orderId]
+  )
 
-    return res.json({ url: checkoutSession.url })
+  await pool.query(
+    `DELETE FROM orders
+     WHERE id = $1
+       AND status = 'pending'
+       AND stripe_session_id IS NULL`,
+    [orderId]
+  )
+
+  throw error
+}
+
+return res.json({ url: checkoutSession.url })
+
+  
   } catch (error) {
     console.error('Checkout failed:', error.message)
 
@@ -221,6 +285,31 @@ app.post('/api/checkout', async (req, res) => {
   }
 })
 
+app.get('/api/orders', async (req, res) => {
+  try {
+    if (!req.session.userId) {
+      return res.status(401).json({
+        error: 'Please log in first.',
+      })
+    }
+
+    const result = await pool.query(
+      `SELECT id, status, total_amount, created_at
+       FROM orders
+       WHERE user_id = $1
+       ORDER BY created_at DESC`,
+      [req.session.userId]
+    )
+
+    return res.json({ orders: result.rows })
+  } catch (error) {
+    console.error('Order history failed:', error.message)
+
+    return res.status(500).json({
+      error: 'Unable to fetch order history.',
+    })
+  }
+})
 
 app.get('/api/orders/:id', async (req, res) => {
   try {

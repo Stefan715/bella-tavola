@@ -15,12 +15,9 @@ export default function App() {
 
   async function loadUser() {
     try {
-      const response = await fetch(
-        `${API_URL}/api/auth/me`,
-        {
-          credentials: 'include',
-        },
-      )
+      const response = await fetch(`${API_URL}/api/auth/me`, {
+        credentials: 'include',
+      })
 
       if (!response.ok) {
         setUser(null)
@@ -36,13 +33,10 @@ export default function App() {
 
   async function handleLogout() {
     try {
-      const response = await fetch(
-        `${API_URL}/api/auth/logout`,
-        {
-          method: 'POST',
-          credentials: 'include',
-        },
-      )
+      const response = await fetch(`${API_URL}/api/auth/logout`, {
+        method: 'POST',
+        credentials: 'include',
+      })
 
       if (!response.ok) {
         throw new Error('Logout failed.')
@@ -55,7 +49,11 @@ export default function App() {
   }
 
   useEffect(() => {
-    loadUser()
+    async function initializeUser() {
+      await loadUser()
+    }
+
+    initializeUser()
   }, [])
 
   return (
