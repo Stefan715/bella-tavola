@@ -37,9 +37,9 @@ app.use(session({
   cookie: {
   maxAge: 1000 * 60 * 60 * 24,
   httpOnly: true,
-  sameSite: 'lax',
-  secure: false,
-  },
+  sameSite: 'none',
+  secure: true,
+},
 }))
 
 // Stripe webhook must receive the raw request body.
